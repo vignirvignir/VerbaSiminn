@@ -1,3 +1,5 @@
+__version__ = "0.1.0"
+
 from verba_client.client import VerbaClient
 from verba_client.exceptions import (
     VerbaAPIError,
