@@ -46,13 +46,16 @@ class CallRecord:
     @classmethod
     def from_xml_element(cls, elem) -> CallRecord:
         """Build a CallRecord from an XML element (verbacdr or similar)."""
+
         def text(tag: str) -> str:
             child = elem.find(tag)
             return child.text.strip() if child is not None and child.text else ""
 
         return cls(
             ccdr_id=text("ccdr_id"),
-            start_time=_parse_dt(text("start_time") or text("starttime") or text("startdate")),
+            start_time=_parse_dt(
+                text("start_time") or text("starttime") or text("startdate")
+            ),
             end_time=_parse_dt(text("end_time") or text("endtime") or text("enddate")),
             duration=text("duration"),
             source_caller_id=text("source_caller_id"),
@@ -76,7 +79,14 @@ class CallRecord:
 
 @dataclass
 class SearchResult:
-    """Result container for SearchCalls responses."""
+    """Result container for SearchCalls responses.
 
-    total_count: int
+    Attributes:
+        row_count: Number of rows in this page of results (from
+            the ``rowcount`` XML attribute).  This is the page
+            size, **not** the total number of matching records.
+        calls: Parsed CallRecord objects from this page.
+    """
+
+    row_count: int
     calls: list[CallRecord]

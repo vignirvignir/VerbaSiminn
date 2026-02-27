@@ -123,6 +123,7 @@ def _error_body(code: int, message: str) -> bytes:
 # 1. Date parsing (_parse_dt)
 # ---------------------------------------------------------------------------
 
+
 class TestParseDt:
     def test_full_format_with_microseconds(self):
         dt = _parse_dt("2026-02-20 10:05:30.500000")
@@ -158,6 +159,7 @@ class TestParseDt:
 # ---------------------------------------------------------------------------
 # 2. Error code mapping
 # ---------------------------------------------------------------------------
+
 
 class TestErrorCodeMapping:
     def test_raise_for_code_auth_error(self):
@@ -209,12 +211,14 @@ class TestErrorCodeMapping:
 # 3. CallRecord.from_xml_element
 # ---------------------------------------------------------------------------
 
+
 class TestCallRecordFromXml:
     def _make_elem(self, xml_str: str) -> ET.Element:
         return ET.fromstring(xml_str)
 
     def test_basic_fields(self):
-        elem = self._make_elem("""
+        elem = self._make_elem(
+            """
         <verbacdr state="recorded">
             <ccdr_id>call-123</ccdr_id>
             <start_time>2026-02-20 10:00:00</start_time>
@@ -226,7 +230,8 @@ class TestCallRecordFromXml:
             <destination_name>Bob</destination_name>
             <userdirection>outbound</userdirection>
             <location>HQ</location>
-        </verbacdr>""")
+        </verbacdr>"""
+        )
         record = CallRecord.from_xml_element(elem)
         assert record.ccdr_id == "call-123"
         assert record.state == "recorded"
@@ -243,10 +248,12 @@ class TestCallRecordFromXml:
         assert record.location == "HQ"
 
     def test_missing_optional_fields(self):
-        elem = self._make_elem("""
+        elem = self._make_elem(
+            """
         <verbacdr>
             <ccdr_id>call-empty</ccdr_id>
-        </verbacdr>""")
+        </verbacdr>"""
+        )
         record = CallRecord.from_xml_element(elem)
         assert record.ccdr_id == "call-empty"
         assert record.start_time is None
@@ -257,22 +264,26 @@ class TestCallRecordFromXml:
         assert record.secondary is False
 
     def test_ondemand_true(self):
-        elem = self._make_elem("""
+        elem = self._make_elem(
+            """
         <verbacdr>
             <ccdr_id>call-od</ccdr_id>
             <ondemand>True</ondemand>
             <secondary>true</secondary>
-        </verbacdr>""")
+        </verbacdr>"""
+        )
         record = CallRecord.from_xml_element(elem)
         assert record.ondemand is True
         assert record.secondary is True
 
     def test_raw_dict_populated(self):
-        elem = self._make_elem("""
+        elem = self._make_elem(
+            """
         <verbacdr>
             <ccdr_id>call-raw</ccdr_id>
             <custom_field>hello</custom_field>
-        </verbacdr>""")
+        </verbacdr>"""
+        )
         record = CallRecord.from_xml_element(elem)
         assert "ccdr_id" in record.raw
         assert record.raw["ccdr_id"] == "call-raw"
@@ -280,23 +291,27 @@ class TestCallRecordFromXml:
 
     def test_fallback_datetime_tags(self):
         """Tests that starttime/endtime tags work as fallbacks."""
-        elem = self._make_elem("""
+        elem = self._make_elem(
+            """
         <verbacdr>
             <ccdr_id>call-fb</ccdr_id>
             <starttime>2026-01-15 08:30:00</starttime>
             <endtime>2026-01-15 09:00:00</endtime>
-        </verbacdr>""")
+        </verbacdr>"""
+        )
         record = CallRecord.from_xml_element(elem)
         assert record.start_time is not None
         assert record.start_time.hour == 8
         assert record.end_time is not None
 
     def test_empty_text_element(self):
-        elem = self._make_elem("""
+        elem = self._make_elem(
+            """
         <verbacdr>
             <ccdr_id>  call-whitespace  </ccdr_id>
             <source_name>  </source_name>
-        </verbacdr>""")
+        </verbacdr>"""
+        )
         record = CallRecord.from_xml_element(elem)
         assert record.ccdr_id == "call-whitespace"
         # empty after strip should be empty
@@ -306,6 +321,7 @@ class TestCallRecordFromXml:
 # ---------------------------------------------------------------------------
 # 4. Authentication
 # ---------------------------------------------------------------------------
+
 
 class TestAuthentication:
     @responses.activate
@@ -372,6 +388,7 @@ class TestAuthentication:
 # 5. Token management
 # ---------------------------------------------------------------------------
 
+
 class TestTokenManagement:
     def test_token_valid_when_fresh(self, client):
         assert client.is_token_valid is True
@@ -406,6 +423,7 @@ class TestTokenManagement:
 # ---------------------------------------------------------------------------
 # 6. Token retry on expired
 # ---------------------------------------------------------------------------
+
 
 class TestTokenRetry:
     @responses.activate
@@ -444,6 +462,7 @@ class TestTokenRetry:
 # 7. HTTP error wrapping
 # ---------------------------------------------------------------------------
 
+
 class TestHTTPErrorWrapping:
     @responses.activate
     def test_http_500_wrapped_in_verba_error(self, client):
@@ -472,6 +491,7 @@ class TestHTTPErrorWrapping:
 # ---------------------------------------------------------------------------
 # 8. XML parsing edge cases
 # ---------------------------------------------------------------------------
+
 
 class TestXmlParsing:
     def test_parse_xml_invalid_raises(self, client):
@@ -502,6 +522,7 @@ class TestXmlParsing:
 # 9. Parameter building
 # ---------------------------------------------------------------------------
 
+
 class TestBuildParams:
     def test_basic_params(self, client):
         params = client._build_params("SearchCalls")
@@ -511,7 +532,9 @@ class TestBuildParams:
         assert param_dict["token"] == "abc123token"
 
     def test_extra_params(self, client):
-        params = client._build_params("SearchCalls", extra={"start": "2026-01-01", "end": "2026-01-31"})
+        params = client._build_params(
+            "SearchCalls", extra={"start": "2026-01-01", "end": "2026-01-31"}
+        )
         param_dict = dict(params)
         assert param_dict["start"] == "2026-01-01"
         assert param_dict["end"] == "2026-01-31"
@@ -535,6 +558,7 @@ class TestBuildParams:
 # 10. SearchCalls
 # ---------------------------------------------------------------------------
 
+
 class TestSearchCalls:
     @responses.activate
     def test_search_calls_basic(self, client):
@@ -545,11 +569,12 @@ class TestSearchCalls:
             status=200,
         )
         from datetime import datetime
+
         result = client.search_calls(
             datetime(2026, 2, 20), datetime(2026, 2, 27), pagelen=10
         )
         assert isinstance(result, SearchResult)
-        assert result.total_count == 2
+        assert result.row_count == 2
         assert len(result.calls) == 2
         assert result.calls[0].ccdr_id == "call-001"
         assert result.calls[0].source_name == "Alice"
@@ -564,7 +589,7 @@ class TestSearchCalls:
             status=200,
         )
         result = client.search_calls("2026-02-20 00:00", "2026-02-27 23:59")
-        assert result.total_count == 2
+        assert result.row_count == 2
 
     @responses.activate
     def test_search_calls_with_anynum_list(self, client):
@@ -575,13 +600,14 @@ class TestSearchCalls:
             status=200,
         )
         result = client.search_calls(
-            "2026-02-20 00:00", "2026-02-27 23:59",
+            "2026-02-20 00:00",
+            "2026-02-27 23:59",
             anynum=["+3541234567", "+3549876543"],
         )
         # Verify repeated params in the request URL
         request_url = responses.calls[0].request.url
         assert "anynum" in request_url
-        assert result.total_count == 2
+        assert result.row_count == 2
 
     @responses.activate
     def test_search_calls_with_anynum_string(self, client):
@@ -592,7 +618,8 @@ class TestSearchCalls:
             status=200,
         )
         client.search_calls(
-            "2026-02-20 00:00", "2026-02-27 23:59",
+            "2026-02-20 00:00",
+            "2026-02-27 23:59",
             anynum="+3541234567",
         )
         request_url = responses.calls[0].request.url
@@ -611,13 +638,139 @@ class TestSearchCalls:
             status=200,
         )
         result = client.search_calls("2026-02-20 00:00", "2026-02-27 23:59")
-        assert result.total_count == 0
+        assert result.row_count == 0
         assert result.calls == []
+
+
+# ---------------------------------------------------------------------------
+# 10b. search_all_calls (auto-pagination)
+# ---------------------------------------------------------------------------
+
+
+def _page_response(call_ids, rowcount=None):
+    """Build a SearchCalls XML response with the given call IDs."""
+    if rowcount is None:
+        rowcount = len(call_ids)
+    cdrs = "\n".join(
+        f'  <verbacdr state="recorded">'
+        f"<ccdr_id>{cid}</ccdr_id>"
+        f"<start_time>2026-02-20 10:00:00</start_time>"
+        f"</verbacdr>"
+        for cid in call_ids
+    )
+    return f"""<?xml version="1.0" encoding="utf-8"?>
+<VerbaData rowcount="{rowcount}">
+  <Response code="0"/>
+  {cdrs}
+</VerbaData>""".encode()
+
+
+class TestSearchAllCalls:
+    @responses.activate
+    def test_single_page(self, client):
+        """When fewer rows than page_size, one request is enough."""
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}/api",
+            body=_page_response(["c1", "c2"]),
+            status=200,
+        )
+        result = client.search_all_calls(
+            "2026-02-20 00:00", "2026-02-27 23:59", page_size=10
+        )
+        assert len(result.calls) == 2
+        assert result.row_count == 2
+        assert len(responses.calls) == 1
+
+    @responses.activate
+    def test_multi_page(self, client):
+        """Auto-paginates when a full page is returned."""
+        # Page 1: 3 calls (full page)
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}/api",
+            body=_page_response(["c1", "c2", "c3"]),
+            status=200,
+        )
+        # Page 2: 2 calls (partial → last page)
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}/api",
+            body=_page_response(["c4", "c5"]),
+            status=200,
+        )
+        result = client.search_all_calls(
+            "2026-02-20 00:00",
+            "2026-02-27 23:59",
+            page_size=3,
+        )
+        assert len(result.calls) == 5
+        assert result.row_count == 5
+        ids = [c.ccdr_id for c in result.calls]
+        assert ids == ["c1", "c2", "c3", "c4", "c5"]
+        assert len(responses.calls) == 2
+
+    @responses.activate
+    def test_exact_page_boundary(self, client):
+        """When last page is exactly full, one more empty fetch needed."""
+        # Page 1: 2 calls (full page)
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}/api",
+            body=_page_response(["c1", "c2"]),
+            status=200,
+        )
+        # Page 2: 0 calls
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}/api",
+            body=_page_response([]),
+            status=200,
+        )
+        result = client.search_all_calls(
+            "2026-02-20 00:00",
+            "2026-02-27 23:59",
+            page_size=2,
+        )
+        assert len(result.calls) == 2
+        assert len(responses.calls) == 2
+
+    @responses.activate
+    def test_empty_result(self, client):
+        """No calls at all."""
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}/api",
+            body=_page_response([]),
+            status=200,
+        )
+        result = client.search_all_calls("2026-02-20 00:00", "2026-02-27 23:59")
+        assert result.calls == []
+        assert result.row_count == 0
+
+    @responses.activate
+    def test_forwards_kwargs(self, client):
+        """Extra filters are passed through to search_calls."""
+        responses.add(
+            responses.GET,
+            f"{BASE_URL}/api",
+            body=_page_response(["c1"]),
+            status=200,
+        )
+        client.search_all_calls(
+            "2026-02-20 00:00",
+            "2026-02-27 23:59",
+            anynum="+3541234567",
+            page_size=100,
+        )
+        url = responses.calls[0].request.url
+        assert "anynum" in url
 
 
 # ---------------------------------------------------------------------------
 # 11. GetCallInformation
 # ---------------------------------------------------------------------------
+
 
 class TestGetCallInformation:
     @responses.activate
@@ -648,6 +801,7 @@ class TestGetCallInformation:
 # 12. GetCallID
 # ---------------------------------------------------------------------------
 
+
 class TestGetCallId:
     @responses.activate
     def test_get_call_id(self, client):
@@ -663,6 +817,7 @@ class TestGetCallId:
 # ---------------------------------------------------------------------------
 # 13. GetCallURL
 # ---------------------------------------------------------------------------
+
 
 class TestGetCallUrl:
     @responses.activate
@@ -680,10 +835,13 @@ class TestGetCallUrl:
 # 14. DeleteCall
 # ---------------------------------------------------------------------------
 
+
 class TestDeleteCall:
     @responses.activate
     def test_delete_call_success(self, client):
-        responses.add(responses.GET, f"{BASE_URL}/api", body=SUCCESS_RESPONSE, status=200)
+        responses.add(
+            responses.GET, f"{BASE_URL}/api", body=SUCCESS_RESPONSE, status=200
+        )
         assert client.delete_call(call_id="call-001") is True
 
     @responses.activate
@@ -702,27 +860,37 @@ class TestDeleteCall:
 # 15. AddMarker
 # ---------------------------------------------------------------------------
 
+
 class TestAddMarker:
     @responses.activate
     def test_add_marker(self, client):
-        responses.add(responses.GET, f"{BASE_URL}/api", body=SUCCESS_RESPONSE, status=200)
-        assert client.add_marker(call_id="call-001", position=5000, label="important") is True
+        responses.add(
+            responses.GET, f"{BASE_URL}/api", body=SUCCESS_RESPONSE, status=200
+        )
+        assert (
+            client.add_marker(call_id="call-001", position=5000, label="important")
+            is True
+        )
 
 
 # ---------------------------------------------------------------------------
 # 16. AttachMetadata
 # ---------------------------------------------------------------------------
 
+
 class TestAttachMetadata:
     @responses.activate
     def test_attach_metadata(self, client):
-        responses.add(responses.GET, f"{BASE_URL}/api", body=SUCCESS_RESPONSE, status=200)
+        responses.add(
+            responses.GET, f"{BASE_URL}/api", body=SUCCESS_RESPONSE, status=200
+        )
         assert client.attach_metadata(call_id="call-001", customer="Acme") is True
 
 
 # ---------------------------------------------------------------------------
 # 17. GetMarkers
 # ---------------------------------------------------------------------------
+
 
 class TestGetMarkers:
     @responses.activate
@@ -747,20 +915,27 @@ class TestGetMarkers:
 # 18. KeepCall, MuteRecording
 # ---------------------------------------------------------------------------
 
+
 class TestKeepCallAndMute:
     @responses.activate
     def test_keep_call(self, client):
-        responses.add(responses.GET, f"{BASE_URL}/api", body=SUCCESS_RESPONSE, status=200)
+        responses.add(
+            responses.GET, f"{BASE_URL}/api", body=SUCCESS_RESPONSE, status=200
+        )
         assert client.keep_call(call_id="call-001") is True
 
     @responses.activate
     def test_mute_recording(self, client):
-        responses.add(responses.GET, f"{BASE_URL}/api", body=SUCCESS_RESPONSE, status=200)
+        responses.add(
+            responses.GET, f"{BASE_URL}/api", body=SUCCESS_RESPONSE, status=200
+        )
         assert client.mute_recording(extension="1234", mute=True) is True
 
     @responses.activate
     def test_unmute_recording(self, client):
-        responses.add(responses.GET, f"{BASE_URL}/api", body=SUCCESS_RESPONSE, status=200)
+        responses.add(
+            responses.GET, f"{BASE_URL}/api", body=SUCCESS_RESPONSE, status=200
+        )
         assert client.mute_recording(extension="1234", mute=False) is True
         request_url = responses.calls[0].request.url
         assert "muteAction=unmute" in request_url
@@ -769,6 +944,7 @@ class TestKeepCallAndMute:
 # ---------------------------------------------------------------------------
 # 19. Media calls
 # ---------------------------------------------------------------------------
+
 
 class TestMediaCalls:
     @responses.activate
@@ -808,9 +984,7 @@ class TestMediaCalls:
     @responses.activate
     def test_get_thumbnail(self, client):
         png_bytes = b"\x89PNG\r\n"
-        responses.add(
-            responses.GET, f"{BASE_URL}/api", body=png_bytes, status=200
-        )
+        responses.add(responses.GET, f"{BASE_URL}/api", body=png_bytes, status=200)
         assert client.get_thumbnail(ccdr_id="call-001") == png_bytes
 
     @responses.activate
@@ -824,6 +998,7 @@ class TestMediaCalls:
 # ---------------------------------------------------------------------------
 # 20. PutMedia
 # ---------------------------------------------------------------------------
+
 
 class TestPutMedia:
     @responses.activate
@@ -872,6 +1047,7 @@ class TestPutMedia:
 # 21. Context manager
 # ---------------------------------------------------------------------------
 
+
 class TestContextManager:
     @responses.activate
     def test_context_manager_authenticates(self):
@@ -909,13 +1085,14 @@ class TestContextManager:
 # 22. SearchResult model
 # ---------------------------------------------------------------------------
 
+
 class TestSearchResult:
     def test_search_result_creation(self):
         calls = [
             CallRecord(ccdr_id="1"),
             CallRecord(ccdr_id="2"),
         ]
-        result = SearchResult(total_count=100, calls=calls)
-        assert result.total_count == 100
+        result = SearchResult(row_count=100, calls=calls)
+        assert result.row_count == 100
         assert len(result.calls) == 2
         assert result.calls[0].ccdr_id == "1"

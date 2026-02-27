@@ -81,7 +81,9 @@ class VerbaClient:
         Returns the token string.
         """
         if not self._username or not self._password:
-            raise VerbaAuthError(-40, "Username and password are required for authentication")
+            raise VerbaAuthError(
+                -40, "Username and password are required for authentication"
+            )
 
         params = {"action": "RequestToken", "apiKey": self.api_key}
 
@@ -142,7 +144,9 @@ class VerbaClient:
         if self._auto_auth:
             self.authenticate()
         else:
-            raise VerbaTokenExpiredError(-43, "Token expired or missing; call authenticate()")
+            raise VerbaTokenExpiredError(
+                -43, "Token expired or missing; call authenticate()"
+            )
 
     # ------------------------------------------------------------------
     # Core request helpers
@@ -321,9 +325,53 @@ class VerbaClient:
             params["anyname"] = [anyname] if isinstance(anyname, str) else anyname
 
         root = self._request_xml("SearchCalls", **params)
-        total = int(root.get("rowcount", "0"))
-        calls = [CallRecord.from_xml_element(cdr) for cdr in root.findall(".//verbacdr")]
-        return SearchResult(total_count=total, calls=calls)
+        row_count = int(root.get("rowcount", "0"))
+        calls = [
+            CallRecord.from_xml_element(cdr) for cdr in root.findall(".//verbacdr")
+        ]
+        return SearchResult(row_count=row_count, calls=calls)
+
+    def search_all_calls(
+        self,
+        start: str | datetime,
+        end: str | datetime,
+        *,
+        page_size: int = 1000,
+        **kwargs: Any,
+    ) -> SearchResult:
+        """Search for call records, auto-paginating through all pages.
+
+        Repeatedly calls ``search_calls`` with increasing ``pagefirst``
+        until a page returns fewer rows than ``page_size``, indicating
+        the last page has been reached.
+
+        Args:
+            start: Start of search period.
+            end: End of search period.
+            page_size: Number of rows per page (default 1000).
+            **kwargs: Additional filters forwarded to ``search_calls``.
+
+        Returns:
+            A single SearchResult containing **all** matching calls.
+        """
+        all_calls: list[CallRecord] = []
+        offset = 0
+
+        while True:
+            result = self.search_calls(
+                start,
+                end,
+                pagefirst=offset,
+                pagelen=page_size,
+                **kwargs,
+            )
+            all_calls.extend(result.calls)
+
+            if len(result.calls) < page_size:
+                break
+            offset += page_size
+
+        return SearchResult(row_count=len(all_calls), calls=all_calls)
 
     def get_call_information(
         self,
@@ -427,10 +475,12 @@ class VerbaClient:
         root = self._request_xml("GetMarkers", callID=call_id, responseType="XML")
         markers = []
         for marker in root.findall(".//marker"):
-            markers.append({
-                "position": marker.get("position", ""),
-                "label": marker.get("label", ""),
-            })
+            markers.append(
+                {
+                    "position": marker.get("position", ""),
+                    "label": marker.get("label", ""),
+                }
+            )
         return markers
 
     def get_voice_quality(self, *, call_id: str) -> ET.Element:
@@ -446,7 +496,9 @@ class VerbaClient:
     def mute_recording(self, *, extension: str, mute: bool = True) -> bool:
         """Mute (pause) or unmute (resume) recording for an extension."""
         action_value = "mute" if mute else "unmute"
-        root = self._request_xml("MuteRecording", extension=extension, muteAction=action_value)
+        root = self._request_xml(
+            "MuteRecording", extension=extension, muteAction=action_value
+        )
         resp = root.find(".//Response")
         return resp is not None and resp.get("code", "") == "0"
 
@@ -497,11 +549,11 @@ class VerbaClient:
         resp = self._request("GetMediaEncoded", params=params)
         return resp.content
 
-    def get_media_live(
-        self, *, extension: str, status: str = "ongoing"
-    ) -> bytes:
+    def get_media_live(self, *, extension: str, status: str = "ongoing") -> bytes:
         """Retrieve live media for an ongoing call."""
-        resp = self._request("GetMediaLive", params={"extension": extension, "status": status})
+        resp = self._request(
+            "GetMediaLive", params={"extension": extension, "status": status}
+        )
         return resp.content
 
     def get_media_segment(
@@ -538,12 +590,16 @@ class VerbaClient:
         params: dict[str, Any] = dict(metadata)
 
         try:
-            resp = self._request("PutMedia", method="POST", params=params, data=media_data)
+            resp = self._request(
+                "PutMedia", method="POST", params=params, data=media_data
+            )
             root = self._check_xml_response(resp.content)
         except VerbaTokenExpiredError:
             logger.debug("Token expired during upload, re-authenticating and retrying")
             self.authenticate()
-            resp = self._request("PutMedia", method="POST", params=params, data=media_data)
+            resp = self._request(
+                "PutMedia", method="POST", params=params, data=media_data
+            )
             root = self._check_xml_response(resp.content)
 
         resp_elem = root.find(".//Response")
