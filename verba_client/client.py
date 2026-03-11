@@ -539,13 +539,13 @@ class VerbaClient:
         """Retrieve encoded media for a call. Returns raw bytes."""
         params: dict[str, Any] = {}
         if ccdr_id:
-            params["ccdr_id"] = ccdr_id
+            params["cid"] = ccdr_id
         if extension:
             params["extension"] = extension
         if status:
             params["status"] = status
         if codec:
-            params["codec"] = codec
+            params["format"] = codec
         resp = self._request("GetMediaEncoded", params=params)
         return resp.content
 
